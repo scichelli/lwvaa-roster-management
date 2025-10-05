@@ -1,12 +1,14 @@
+Private NationalWorksheetName, ClubWorksheetName As String
+
 Sub LoadNationalRoster()
-    LoadExcelFileToNewSheet "National"
+    NationalWorksheetName = LoadExcelFileToNewSheet("National")
 End Sub
 
 Sub LoadClubRoster()
-    LoadExcelFileToNewSheet "Club"
+    ClubWorksheetName = LoadExcelFileToNewSheet("Club")
 End Sub
 
-Sub LoadExcelFileToNewSheet(rosterName As String)
+Function LoadExcelFileToNewSheet(rosterName As String)
     Dim filePath As String
     Dim sourceWB As Workbook
     Dim sourceWS As Worksheet
@@ -16,7 +18,7 @@ Sub LoadExcelFileToNewSheet(rosterName As String)
     filePath = Application.GetOpenFilename("Excel Files (*.xlsx; *.xls), *.xlsx; *.xls", , "Select an Excel File")
 
     ' Exit if user cancels
-    If filePath = "False" Then Exit Sub
+    If filePath = "False" Then Exit Function
 
     ' Open the selected workbook
     Set sourceWB = Workbooks.Open(filePath)
@@ -33,5 +35,7 @@ Sub LoadExcelFileToNewSheet(rosterName As String)
     sourceWB.Close SaveChanges:=False
 
     MsgBox "File imported successfully into sheet: " & targetWS.Name
-End Sub
+    
+    LoadExcelFileToNewSheet = targetWS.Name
+End Function
 
