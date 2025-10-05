@@ -41,7 +41,7 @@ Once you set up a Macro-Enabled Workbook with the `roster-compare` macro one tim
 6. The VBA editor will open, with a default subroutine definition.
 
 **Replace the default macro with the code from this repository:**
-1. Find the macro definition in this repository, in `macros/roster-compare.vba`.
+1. Find the macro definition in this repository, in [macros/roster-compare.vba](./macros/roster-compare.vba).
 2. Read the code to confirm that you are comfortable with the actions it is going to take.
 3. Select and copy the code.
 4. Back in the VBA editor for Excel, replace the default subroutine and paste the `roster-compare.vba` code.
