@@ -1,5 +1,6 @@
 Sub RunSynchronization()
-    Dim nationalWorksheet, clubWorksheet As Worksheet
+    Dim nationalWorksheet As Worksheet
+    Dim clubWorksheet As Worksheet
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -13,6 +14,9 @@ Sub RunSynchronization()
         MsgBox "Did not find two worksheets to compare"
         Exit Sub
     End If
+        
+    ApplyHeaderRow nationalWorksheet
+    ApplyHeaderRow clubWorksheet
     
     ' Begin: data cleanup
     MsgBox "Detecting duplicates..."
@@ -59,3 +63,10 @@ Function LoadExcelFileToNewSheet(rosterName As String) As Worksheet
     Set LoadExcelFileToNewSheet = targetWS
 End Function
 
+Sub ApplyHeaderRow(ByRef ws As Worksheet)
+    ' Clear any existing filters
+    If ws.AutoFilterMode Then ws.AutoFilterMode = False
+    
+    ' Apply AutoFilter to the first row
+    ws.Rows(1).AutoFilter
+End Sub
