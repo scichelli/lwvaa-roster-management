@@ -1,15 +1,15 @@
 Sub RunSynchronization()
-    Dim nationalWorksheetName, clubWorksheetName As String
+    Dim nationalWorksheet, clubWorksheet As Worksheet
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
-    nationalWorksheetName = LoadNationalRoster()
+    Set nationalWorksheet = LoadNationalRoster()
     
     MsgBox "Next we'll load the Club roster into a worksheet"
-    clubWorksheetName = LoadClubRoster()
+    Set clubWorksheet = LoadClubRoster()
     ' End: load rosters into worksheets
     
-    If nationalWorksheetName = vbNullString Or clubWorksheetName = vbNullString Then
+    If nationalWorksheet Is Nothing Or clubWorksheet Is Nothing Then
         MsgBox "Did not find two worksheets to compare"
         Exit Sub
     End If
@@ -20,15 +20,15 @@ Sub RunSynchronization()
     ' End: data cleanup
 End Sub
 
-Function LoadNationalRoster()
-    LoadNationalRoster = LoadExcelFileToNewSheet("National")
+Function LoadNationalRoster() As Worksheet
+    Set LoadNationalRoster = LoadExcelFileToNewSheet("National")
 End Function
 
-Function LoadClubRoster()
-    LoadClubRoster = LoadExcelFileToNewSheet("Club")
+Function LoadClubRoster() As Worksheet
+    Set LoadClubRoster = LoadExcelFileToNewSheet("Club")
 End Function
 
-Function LoadExcelFileToNewSheet(rosterName As String)
+Function LoadExcelFileToNewSheet(rosterName As String) As Worksheet
     Dim filePath As String
     Dim sourceWB As Workbook
     Dim sourceWS As Worksheet
@@ -56,6 +56,6 @@ Function LoadExcelFileToNewSheet(rosterName As String)
 
     MsgBox "File imported successfully into sheet: " & targetWS.Name
     
-    LoadExcelFileToNewSheet = targetWS.Name
+    Set LoadExcelFileToNewSheet = targetWS
 End Function
 
