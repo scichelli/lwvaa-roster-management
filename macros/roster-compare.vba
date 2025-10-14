@@ -1,6 +1,7 @@
 Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
+    Dim maxNationalRow, maxClubRow As Long
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -14,9 +15,20 @@ Sub RunSynchronization()
         MsgBox "Did not find two worksheets to compare"
         Exit Sub
     End If
-        
+    
+    ' Begin: prep sheets
     ApplyHeaderRow nationalWorksheet
     ApplyHeaderRow clubWorksheet
+    
+    maxNationalRow = LastRowWithDataInColumn(nationalWorksheet, "Unique Contact Id")
+    maxClubRow = LastRowWithDataInColumn(clubWorksheet, "member_number")
+    
+    If maxNationalRow = 0 Or maxClubRow = 0 Then
+        MsgBox "Did not find data to compare"
+        Exit Sub
+    End If
+    
+    ' End: prep sheets
     
     ' Begin: data cleanup
     MsgBox "Detecting duplicates..."
@@ -70,3 +82,26 @@ Sub ApplyHeaderRow(ByRef ws As Worksheet)
     ' Apply AutoFilter to the first row
     ws.Rows(1).AutoFilter
 End Sub
+
+Function FindColumnByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
+    Dim foundCell As Range
+    Set foundCell = ws.Rows(1).Find(What:=columnName, LookIn:=xlValues, LookAt:=xlWhole)
+    
+    If foundCell Is Nothing Then
+        MsgBox "Could not find column " & columnName & " in worksheet " & ws.Name
+        Exit Function
+    End If
+    
+    FindColumnByName = foundCell.column
+End Function
+
+Function LastRowWithDataInColumn(ByRef ws As Worksheet, ByVal columnName As String) As Long
+    Dim columnIndex As Long
+    columnIndex = FindColumnByName(ws, columnName)
+    
+    If columnIndex = 0 Then
+        Exit Function
+    End If
+    
+    LastRowWithDataInColumn = ws.Cells(ws.Rows.Count, columnIndex).End(xlUp).Row ' Find last used row in specified column
+End Function
