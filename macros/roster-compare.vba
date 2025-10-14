@@ -47,6 +47,7 @@ Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
     Dim maxNationalRow, maxClubRow As Long
+    Dim maxNationalColumn, maxClubColumn As Long
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -73,6 +74,8 @@ Sub RunSynchronization()
         Exit Sub
     End If
     
+    maxNationalColumn = LastColumnWithData(nationalWorksheet)
+    maxClubColumn = LastColumnWithData(clubWorksheet)
     ' End: prep sheets
     
     ' Begin: data cleanup
@@ -149,4 +152,8 @@ Function LastRowWithDataInColumn(ByRef ws As Worksheet, ByVal columnName As Stri
     End If
     
     LastRowWithDataInColumn = ws.Cells(ws.Rows.Count, columnIndex).End(xlUp).Row ' Find last used row in specified column
+End Function
+
+Function LastColumnWithData(ByRef ws As Worksheet) As Long
+    LastColumnWithData = ws.Cells(1, ws.Columns.Count).End(xlToLeft).column
 End Function
