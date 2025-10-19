@@ -43,6 +43,10 @@ Const C_MemberType_name As String = "member_type_name"
 Const C_Level As String = "level"
 Const C_ExpirationDate As String = "expiration_date"
 
+' Internal operations column header names
+Const I_SortableLastName As String = "Sortable Last Name"
+Const I_CombinedName As String = "Combined Name"
+
 Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
@@ -79,8 +83,9 @@ Sub RunSynchronization()
     ' End: prep sheets
     
     ' Begin: data cleanup
-    MsgBox "Detecting duplicates..."
-    ' to do
+    SortByName nationalWorksheet, maxNationalRow, maxNationalColumn, N_FirstName, N_LastName
+    SortByName clubWorksheet, maxClubRow, maxClubColumn, C_FirstName, C_LastName
+    
     ' End: data cleanup
 End Sub
 
@@ -131,7 +136,43 @@ Sub ApplyHeaderRow(ByRef ws As Worksheet)
     ws.Rows(1).AutoFilter
 End Sub
 
-Function FindColumnByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
+Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal maxColumn As Long, ByVal firstNameColumnName As String, ByVal lastNameColumnName As String)
+    Dim sortableLastNameColumn, combinedNameColumn As Long
+    Dim firstNameColumn, lastNameColumn As String
+    sortableLastNameColumn = maxColumn + 1
+    combinedNameColumn = maxColumn + 2
+    firstNameColumn = FindColumnLetterByName(ws, firstNameColumnName)
+    lastNameColumn = FindColumnLetterByName(ws, lastNameColumnName)
+    
+    ws.Cells(1, sortableLastNameColumn).Value = I_SortableLastName
+    ws.Cells(1, combinedNameColumn).Value = I_CombinedName
+    
+    For i = 2 To maxRow
+        ' Sortable Last Name is last name, lowercased, with all numbers and punctuation removed
+        ws.Cells(i, sortableLastNameColumn).Formula = "=LowercaseLettersOnly(" & lastNameColumn & i & ")"
+        ' Combined Name is last name and first name, to help with comparison
+        ws.Cells(i, combinedNameColumn).Formula = "=CONCATENATE(LowercaseLettersOnly(" & lastNameColumn & i & "), LowercaseLettersOnly(" & firstNameColumn & i & "))"
+    Next i
+
+    ' Sort by the sortable last name column
+    With ws.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=ws.Range(ColumnNumberToLetter(sortableLastNameColumn) & 2), _
+            SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+            ' ws.Range("M2"), if "M" is the sortable column, and "2" because row 1 is a header
+        .SetRange ws.UsedRange
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .Apply
+    End With
+End Sub
+
+Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
+    FindColumnLetterByName = ColumnNumberToLetter(FindColumnNumberByName(ws, columnName))
+End Function
+
+Function FindColumnNumberByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
     Dim foundCell As Range
     Set foundCell = ws.Rows(1).Find(What:=columnName, LookIn:=xlValues, LookAt:=xlWhole)
     
@@ -140,12 +181,16 @@ Function FindColumnByName(ByRef ws As Worksheet, ByVal columnName As String) As 
         Exit Function
     End If
     
-    FindColumnByName = foundCell.column
+    FindColumnNumberByName = foundCell.column
+End Function
+
+Function ColumnNumberToLetter(ByVal colNum As Long) As String
+    ColumnNumberToLetter = Split(Cells(1, colNum).Address(True, False), "$")(0)
 End Function
 
 Function LastRowWithDataInColumn(ByRef ws As Worksheet, ByVal columnName As String) As Long
     Dim columnIndex As Long
-    columnIndex = FindColumnByName(ws, columnName)
+    columnIndex = FindColumnNumberByName(ws, columnName)
     
     If columnIndex = 0 Then
         Exit Function
@@ -156,4 +201,20 @@ End Function
 
 Function LastColumnWithData(ByRef ws As Worksheet) As Long
     LastColumnWithData = ws.Cells(1, ws.Columns.Count).End(xlToLeft).column
+End Function
+
+Function LowercaseLettersOnly(ByVal txt As String) As String
+    Dim i As Integer
+    Dim ch As String
+    Dim result As String
+
+    txt = LCase(txt)
+    For i = 1 To Len(txt)
+        ch = Mid(txt, i, 1)
+        If ch >= "a" And ch <= "z" Then
+            result = result & ch
+        End If
+    Next i
+
+    LowercaseLettersOnly = result
 End Function
