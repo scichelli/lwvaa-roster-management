@@ -43,9 +43,10 @@ Once you set up a Macro-Enabled Workbook with the `roster-compare` macro one tim
 **Replace the default macro with the code from this repository:**
 1. Find the macro definition in this repository, in [macros/roster-compare.vba](./macros/roster-compare.vba).
 2. Read the code to confirm that you are comfortable with the actions it is going to take.
-3. Select and copy the code.
-4. Back in the VBA editor for Excel, replace the default subroutine and paste the `roster-compare.vba` code.
-5. Click "Save" in the VBA editor.
+3. Click the "Raw" button in GitHub to open a [plain-text view of the code](https://raw.githubusercontent.com/scichelli/lwvaa-roster-management/refs/heads/main/macros/roster-compare.vba) to make it easy to select only the code, not the rest of the GitHub website.
+4. Select and copy the code.
+5. Back in the VBA editor for Excel, replace the default subroutine and paste the `roster-compare.vba` code.
+6. Click "Save" in the VBA editor.
 
 **Connect the button to the macro:**
 1. The spreadsheet is open in a different window.
