@@ -53,6 +53,8 @@ Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
     Dim maxNationalRow, maxClubRow As Long
+    Dim nationalColumns As Object
+    Dim clubColumns As Object
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -60,14 +62,14 @@ Sub RunSynchronization()
     
     MsgBox "Next we'll load the Club roster into a worksheet"
     Set clubWorksheet = LoadClubRoster()
-    ' End: load rosters into worksheets
     
     If nationalWorksheet Is Nothing Or clubWorksheet Is Nothing Then
         MsgBox "Did not find two worksheets to compare"
         Exit Sub
     End If
+    ' End: load rosters into worksheets
     
-    ' Begin: prep sheets
+    ' Begin: identify data shape
     maxNationalRow = LastRowWithDataInColumn(nationalWorksheet, N_UniqueContactId)
     maxClubRow = LastRowWithDataInColumn(clubWorksheet, C_MemberNumber)
     
@@ -76,7 +78,9 @@ Sub RunSynchronization()
         Exit Sub
     End If
     
-    ' End: prep sheets
+    Set nationalColumns = BuildNationalColumnsDictionary(nationalWorksheet)
+    Set clubColumns = BuildClubColumnsDictionary(clubWorksheet)
+    ' End: identify data shape
     
     ' Begin: identify duplicates
     SortByName nationalWorksheet, maxNationalRow, N_FirstName, N_LastName
@@ -91,7 +95,7 @@ Sub RunSynchronization()
     ' End: identify duplicates
     
     ' Begin: discrepancy report
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    BuildDiscrepancyReport nationalWorksheet, nationalColumns, clubWorksheet, clubColumns
     ' End: discrepancy report
 End Sub
 
@@ -101,18 +105,23 @@ Sub StartDiscrepancyReport()
     ' Use B11 and B12 for worksheet names
     
     Dim controlWS As Worksheet
-    Dim nationalWS As Worksheet
-    Dim clubWS As Worksheet
+    Dim nationalWorksheet As Worksheet
+    Dim clubWorksheet As Worksheet
     Dim nationalWsName, clubWsName As String
-    
+    Dim nationalColumns As Object
+    Dim clubColumns As Object
+
     Set controlWS = ThisWorkbook.Sheets(1)
     nationalWsName = controlWS.Cells(11, 2).Value
     clubWsName = controlWS.Cells(12, 2).Value
     
-    Set nationalWS = ThisWorkbook.Sheets(nationalWsName)
-    Set clubWS = ThisWorkbook.Sheets(clubWsName)
+    Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
+    Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
     
-    BuildDiscrepancyReport nationalWS, clubWS
+    Set nationalColumns = BuildNationalColumnsDictionary(nationalWorksheet)
+    Set clubColumns = BuildClubColumnsDictionary(clubWorksheet)
+
+    BuildDiscrepancyReport nationalWorksheet, nationalColumns, clubWorksheet, clubColumns
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -152,6 +161,20 @@ Function LoadExcelFileToNewSheet(rosterName As String) As Worksheet
     MsgBox "File imported successfully into sheet: " & targetWS.Name
     
     Set LoadExcelFileToNewSheet = targetWS
+End Function
+
+Function BuildNationalColumnsDictionary(ByRef ws As Worksheet) As Object
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    ' TODO
+    Set BuildNationalColumnsDictionary = dict
+End Function
+
+Function BuildClubColumnsDictionary(ByRef ws As Worksheet) As Object
+    Dim dict As Object
+    Set dict = CreateObject("Scripting.Dictionary")
+    ' TODO
+    Set BuildClubColumnsDictionary = dict
 End Function
 
 Sub ApplyHeaderRow(ByRef ws As Worksheet)
@@ -250,8 +273,11 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     End With
 End Sub
 
-Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByVal nationalColumns As Object, ByRef clubWS As Worksheet, ByVal clubColumns As Object)
     MsgBox "Found " & nationalWS.Name & " and " & clubWS.Name
+    'Dim testDict As RosterColumn
+    'testDict = nationalColumns(N_FirstName)
+    'MsgBox "Found in dictionary " & testDict.MyColumnName & " " & testDict.ColumnLetter & " " & testDict.ColumnNumber
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
