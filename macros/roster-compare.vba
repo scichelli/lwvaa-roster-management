@@ -182,16 +182,20 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     ' add conditional formatting, orange if duplicate combined name
     
     Dim maxColumn, hasDuplicateLastNameColumn, hasDuplicateFullNameColumn As Long
+    Dim dupLN, dupFN As String ' Has Duplicate Last Name column letter and Has Duplicate Full Name column letter
     Dim ln, fn As String ' Last Name column letter and Full Name column letter
     maxColumn = LastColumnWithData(ws)
     hasDuplicateLastNameColumn = maxColumn + 1
     hasDuplicateFullNameColumn = maxColumn + 2
     ln = FindColumnLetterByName(ws, I_SortableLastName)
     fn = FindColumnLetterByName(ws, I_CombinedName)
+    dupLN = ColumnNumberToLetter(hasDuplicateLastNameColumn)
+    dupFN = ColumnNumberToLetter(hasDuplicateFullNameColumn)
 
     ws.Cells(1, hasDuplicateLastNameColumn).Value = I_DuplicateLastName
     ws.Cells(1, hasDuplicateFullNameColumn).Value = I_DuplicateCombinedName
 
+    ' add boolean columns for detected duplicates
     For i = 2 To maxRow
         ' Find-duplicates formula example:
         ' =COUNTIF(M:M, M2) > 1
@@ -199,6 +203,27 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
         ws.Cells(i, hasDuplicateFullNameColumn).Formula = "=COUNTIF(" & fn & ":" & fn & ", " & fn & i & ") > 1"
     Next i
     
+    ' add conditional format rules to highlight rows with duplicates
+    
+    ' Clear existing conditional format rules
+    ws.Cells.FormatConditions.Delete
+    ' Define the range to apply formatting (entire rows from A to max column)
+    Dim dataRange As Range
+    Set dataRange = ws.Range("A2:" & dupFN & maxRow) ' A2 because headers are in row 1; dupFN because Has Duplicate Full Name is now the right-most column
+
+    ' Orange formatting (Column Has Duplicate Full Name = TRUE) -- higher priority
+    With dataRange.FormatConditions.Add(Type:=xlExpression, _
+        Formula1:="=$" & dupFN & "2=TRUE")
+        .Interior.Color = RGB(255, 192, 0) ' Orange
+        .StopIfTrue = False
+    End With
+
+    ' Gray formatting (Column Has Duplicate Last Name = TRUE)
+    With dataRange.FormatConditions.Add(Type:=xlExpression, _
+        Formula1:="=$" & dupLN & "2=TRUE")
+        .Interior.Color = RGB(200, 200, 200) ' Light gray
+        .StopIfTrue = False
+    End With
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
