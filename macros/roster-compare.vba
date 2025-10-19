@@ -78,7 +78,7 @@ Sub RunSynchronization()
     
     ' End: prep sheets
     
-    ' Begin: data cleanup
+    ' Begin: identify duplicates
     SortByName nationalWorksheet, maxNationalRow, N_FirstName, N_LastName
     SortByName clubWorksheet, maxClubRow, C_FirstName, C_LastName
     
@@ -88,7 +88,31 @@ Sub RunSynchronization()
     ApplyHeaderRow nationalWorksheet
     ApplyHeaderRow clubWorksheet
     
-    ' End: data cleanup
+    ' End: identify duplicates
+    
+    ' Begin: discrepancy report
+    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    ' End: discrepancy report
+End Sub
+
+Sub StartDiscrepancyReport()
+    ' Useful for testing, and for re-generating the report after modifying the roster worksheets
+    ' If you've already loaded sheets and allowed the macro to prep them, a button connected to this macro can generate the report without repeating the prep.
+    ' Use B11 and B12 for worksheet names
+    
+    Dim controlWS As Worksheet
+    Dim nationalWS As Worksheet
+    Dim clubWS As Worksheet
+    Dim nationalWsName, clubWsName As String
+    
+    Set controlWS = ThisWorkbook.Sheets(1)
+    nationalWsName = controlWS.Cells(11, 2).Value
+    clubWsName = controlWS.Cells(12, 2).Value
+    
+    Set nationalWS = ThisWorkbook.Sheets(nationalWsName)
+    Set clubWS = ThisWorkbook.Sheets(clubWsName)
+    
+    BuildDiscrepancyReport nationalWS, clubWS
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -224,6 +248,10 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
         .Interior.Color = RGB(200, 200, 200) ' Light gray
         .StopIfTrue = False
     End With
+End Sub
+
+Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+    MsgBox "Found " & nationalWS.Name & " and " & clubWS.Name
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
