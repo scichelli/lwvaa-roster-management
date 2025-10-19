@@ -43,11 +43,16 @@ Const C_MemberType_name As String = "member_type_name"
 Const C_Level As String = "level"
 Const C_ExpirationDate As String = "expiration_date"
 
+' Internal operations column header names
+Const I_SortableLastName As String = "Sortable Last Name"
+Const I_CombinedName As String = "Combined Name"
+Const I_DuplicateLastName As String = "Has Duplicate Last Name"
+Const I_DuplicateCombinedName As String = "Has Duplicate Full Name"
+
 Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
     Dim maxNationalRow, maxClubRow As Long
-    Dim maxNationalColumn, maxClubColumn As Long
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -63,9 +68,6 @@ Sub RunSynchronization()
     End If
     
     ' Begin: prep sheets
-    ApplyHeaderRow nationalWorksheet
-    ApplyHeaderRow clubWorksheet
-    
     maxNationalRow = LastRowWithDataInColumn(nationalWorksheet, N_UniqueContactId)
     maxClubRow = LastRowWithDataInColumn(clubWorksheet, C_MemberNumber)
     
@@ -74,13 +76,18 @@ Sub RunSynchronization()
         Exit Sub
     End If
     
-    maxNationalColumn = LastColumnWithData(nationalWorksheet)
-    maxClubColumn = LastColumnWithData(clubWorksheet)
     ' End: prep sheets
     
     ' Begin: data cleanup
-    MsgBox "Detecting duplicates..."
-    ' to do
+    SortByName nationalWorksheet, maxNationalRow, N_FirstName, N_LastName
+    SortByName clubWorksheet, maxClubRow, C_FirstName, C_LastName
+    
+    HighlightDuplicateNames nationalWorksheet, maxNationalRow
+    HighlightDuplicateNames clubWorksheet, maxClubRow
+    
+    ApplyHeaderRow nationalWorksheet
+    ApplyHeaderRow clubWorksheet
+    
     ' End: data cleanup
 End Sub
 
@@ -131,7 +138,99 @@ Sub ApplyHeaderRow(ByRef ws As Worksheet)
     ws.Rows(1).AutoFilter
 End Sub
 
-Function FindColumnByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
+Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal firstNameColumnName As String, ByVal lastNameColumnName As String)
+    ' add column for last name, lower-cased, removing non-alphanumeric
+    ' add column for last name + first name, lower-cased, removing non-alphanumeric
+    ' sort by the last name column
+    
+    Dim maxColumn, sortableLastNameColumn, combinedNameColumn As Long
+    Dim firstNameColumn, lastNameColumn As String
+    maxColumn = LastColumnWithData(ws)
+    sortableLastNameColumn = maxColumn + 1
+    combinedNameColumn = maxColumn + 2
+    firstNameColumn = FindColumnLetterByName(ws, firstNameColumnName)
+    lastNameColumn = FindColumnLetterByName(ws, lastNameColumnName)
+    
+    ws.Cells(1, sortableLastNameColumn).Value = I_SortableLastName
+    ws.Cells(1, combinedNameColumn).Value = I_CombinedName
+    
+    For i = 2 To maxRow
+        ' Sortable Last Name is last name, lowercased, with all numbers and punctuation removed
+        ws.Cells(i, sortableLastNameColumn).Formula = "=LowercaseLettersOnly(" & lastNameColumn & i & ")"
+        ' Combined Name is last name and first name, to help with comparison
+        ws.Cells(i, combinedNameColumn).Formula = "=CONCATENATE(LowercaseLettersOnly(" & lastNameColumn & i & "), LowercaseLettersOnly(" & firstNameColumn & i & "))"
+    Next i
+
+    ' Sort by the sortable last name column
+    With ws.Sort
+        .SortFields.Clear
+        .SortFields.Add Key:=ws.Range(ColumnNumberToLetter(sortableLastNameColumn) & 2), _
+            SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
+            ' ws.Range("M2"), if "M" is the sortable column, and "2" because row 1 is a header
+        .SetRange ws.UsedRange
+        .Header = xlYes
+        .MatchCase = False
+        .Orientation = xlTopToBottom
+        .Apply
+    End With
+End Sub
+
+Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
+    ' add column for duplicate SortableLastName
+    ' add column for duplicate CombinedName
+    ' add conditional formatting, gray if duplicate last name
+    ' add conditional formatting, orange if duplicate combined name
+    
+    Dim maxColumn, hasDuplicateLastNameColumn, hasDuplicateFullNameColumn As Long
+    Dim dupLN, dupFN As String ' Has Duplicate Last Name column letter and Has Duplicate Full Name column letter
+    Dim ln, fn As String ' Last Name column letter and Full Name column letter
+    maxColumn = LastColumnWithData(ws)
+    hasDuplicateLastNameColumn = maxColumn + 1
+    hasDuplicateFullNameColumn = maxColumn + 2
+    ln = FindColumnLetterByName(ws, I_SortableLastName)
+    fn = FindColumnLetterByName(ws, I_CombinedName)
+    dupLN = ColumnNumberToLetter(hasDuplicateLastNameColumn)
+    dupFN = ColumnNumberToLetter(hasDuplicateFullNameColumn)
+
+    ws.Cells(1, hasDuplicateLastNameColumn).Value = I_DuplicateLastName
+    ws.Cells(1, hasDuplicateFullNameColumn).Value = I_DuplicateCombinedName
+
+    ' add boolean columns for detected duplicates
+    For i = 2 To maxRow
+        ' Find-duplicates formula example:
+        ' =COUNTIF(M:M, M2) > 1
+        ws.Cells(i, hasDuplicateLastNameColumn).Formula = "=COUNTIF(" & ln & ":" & ln & ", " & ln & i & ") > 1"
+        ws.Cells(i, hasDuplicateFullNameColumn).Formula = "=COUNTIF(" & fn & ":" & fn & ", " & fn & i & ") > 1"
+    Next i
+    
+    ' add conditional format rules to highlight rows with duplicates
+    
+    ' Clear existing conditional format rules
+    ws.Cells.FormatConditions.Delete
+    ' Define the range to apply formatting (entire rows from A to max column)
+    Dim dataRange As Range
+    Set dataRange = ws.Range("A2:" & dupFN & maxRow) ' A2 because headers are in row 1; dupFN because Has Duplicate Full Name is now the right-most column
+
+    ' Orange formatting (Column Has Duplicate Full Name = TRUE) -- higher priority
+    With dataRange.FormatConditions.Add(Type:=xlExpression, _
+        Formula1:="=$" & dupFN & "2=TRUE")
+        .Interior.Color = RGB(255, 192, 0) ' Orange
+        .StopIfTrue = False
+    End With
+
+    ' Gray formatting (Column Has Duplicate Last Name = TRUE)
+    With dataRange.FormatConditions.Add(Type:=xlExpression, _
+        Formula1:="=$" & dupLN & "2=TRUE")
+        .Interior.Color = RGB(200, 200, 200) ' Light gray
+        .StopIfTrue = False
+    End With
+End Sub
+
+Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
+    FindColumnLetterByName = ColumnNumberToLetter(FindColumnNumberByName(ws, columnName))
+End Function
+
+Function FindColumnNumberByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
     Dim foundCell As Range
     Set foundCell = ws.Rows(1).Find(What:=columnName, LookIn:=xlValues, LookAt:=xlWhole)
     
@@ -140,12 +239,16 @@ Function FindColumnByName(ByRef ws As Worksheet, ByVal columnName As String) As 
         Exit Function
     End If
     
-    FindColumnByName = foundCell.column
+    FindColumnNumberByName = foundCell.column
+End Function
+
+Function ColumnNumberToLetter(ByVal colNum As Long) As String
+    ColumnNumberToLetter = Split(Cells(1, colNum).Address(True, False), "$")(0)
 End Function
 
 Function LastRowWithDataInColumn(ByRef ws As Worksheet, ByVal columnName As String) As Long
     Dim columnIndex As Long
-    columnIndex = FindColumnByName(ws, columnName)
+    columnIndex = FindColumnNumberByName(ws, columnName)
     
     If columnIndex = 0 Then
         Exit Function
@@ -156,4 +259,20 @@ End Function
 
 Function LastColumnWithData(ByRef ws As Worksheet) As Long
     LastColumnWithData = ws.Cells(1, ws.Columns.Count).End(xlToLeft).column
+End Function
+
+Function LowercaseLettersOnly(ByVal txt As String) As String
+    Dim i As Integer
+    Dim ch As String
+    Dim result As String
+
+    txt = LCase(txt)
+    For i = 1 To Len(txt)
+        ch = Mid(txt, i, 1)
+        If ch >= "a" And ch <= "z" Then
+            result = result & ch
+        End If
+    Next i
+
+    LowercaseLettersOnly = result
 End Function
