@@ -51,7 +51,6 @@ Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
     Dim maxNationalRow, maxClubRow As Long
-    Dim maxNationalColumn, maxClubColumn As Long
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -78,13 +77,11 @@ Sub RunSynchronization()
         Exit Sub
     End If
     
-    maxNationalColumn = LastColumnWithData(nationalWorksheet)
-    maxClubColumn = LastColumnWithData(clubWorksheet)
     ' End: prep sheets
     
     ' Begin: data cleanup
-    SortByName nationalWorksheet, maxNationalRow, maxNationalColumn, N_FirstName, N_LastName
-    SortByName clubWorksheet, maxClubRow, maxClubColumn, C_FirstName, C_LastName
+    SortByName nationalWorksheet, maxNationalRow, N_FirstName, N_LastName
+    SortByName clubWorksheet, maxClubRow, C_FirstName, C_LastName
     
     ' End: data cleanup
 End Sub
@@ -136,9 +133,10 @@ Sub ApplyHeaderRow(ByRef ws As Worksheet)
     ws.Rows(1).AutoFilter
 End Sub
 
-Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal maxColumn As Long, ByVal firstNameColumnName As String, ByVal lastNameColumnName As String)
-    Dim sortableLastNameColumn, combinedNameColumn As Long
+Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal firstNameColumnName As String, ByVal lastNameColumnName As String)
+    Dim maxColumn, sortableLastNameColumn, combinedNameColumn As Long
     Dim firstNameColumn, lastNameColumn As String
+    maxColumn = LastColumnWithData(ws)
     sortableLastNameColumn = maxColumn + 1
     combinedNameColumn = maxColumn + 2
     firstNameColumn = FindColumnLetterByName(ws, firstNameColumnName)
