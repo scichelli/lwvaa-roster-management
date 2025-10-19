@@ -46,6 +46,8 @@ Const C_ExpirationDate As String = "expiration_date"
 ' Internal operations column header names
 Const I_SortableLastName As String = "Sortable Last Name"
 Const I_CombinedName As String = "Combined Name"
+Const I_DuplicateLastName As String = "Has Duplicate Last Name"
+Const I_DuplicateCombinedName As String = "Has Duplicate Full Name"
 
 Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
@@ -82,6 +84,9 @@ Sub RunSynchronization()
     ' Begin: data cleanup
     SortByName nationalWorksheet, maxNationalRow, N_FirstName, N_LastName
     SortByName clubWorksheet, maxClubRow, C_FirstName, C_LastName
+    
+    HighlightDuplicateNames nationalWorksheet, maxNationalRow
+    HighlightDuplicateNames clubWorksheet, maxClubRow
     
     ' End: data cleanup
 End Sub
@@ -134,6 +139,10 @@ Sub ApplyHeaderRow(ByRef ws As Worksheet)
 End Sub
 
 Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal firstNameColumnName As String, ByVal lastNameColumnName As String)
+    ' add column for last name, lower-cased, removing non-alphanumeric
+    ' add column for last name + first name, lower-cased, removing non-alphanumeric
+    ' sort by the last name column
+    
     Dim maxColumn, sortableLastNameColumn, combinedNameColumn As Long
     Dim firstNameColumn, lastNameColumn As String
     maxColumn = LastColumnWithData(ws)
@@ -164,6 +173,32 @@ Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal firstNameColum
         .Orientation = xlTopToBottom
         .Apply
     End With
+End Sub
+
+Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
+    ' add column for duplicate SortableLastName
+    ' add column for duplicate CombinedName
+    ' add conditional formatting, gray if duplicate last name
+    ' add conditional formatting, orange if duplicate combined name
+    
+    Dim maxColumn, hasDuplicateLastNameColumn, hasDuplicateFullNameColumn As Long
+    Dim ln, fn As String ' Last Name column letter and Full Name column letter
+    maxColumn = LastColumnWithData(ws)
+    hasDuplicateLastNameColumn = maxColumn + 1
+    hasDuplicateFullNameColumn = maxColumn + 2
+    ln = FindColumnLetterByName(ws, I_SortableLastName)
+    fn = FindColumnLetterByName(ws, I_CombinedName)
+
+    ws.Cells(1, hasDuplicateLastNameColumn).Value = I_DuplicateLastName
+    ws.Cells(1, hasDuplicateFullNameColumn).Value = I_DuplicateCombinedName
+
+    For i = 2 To maxRow
+        ' Find-duplicates formula example:
+        ' =COUNTIF(M:M, M2) > 1
+        ws.Cells(i, hasDuplicateLastNameColumn).Formula = "=COUNTIF(" & ln & ":" & ln & ", " & ln & i & ") > 1"
+        ws.Cells(i, hasDuplicateFullNameColumn).Formula = "=COUNTIF(" & fn & ":" & fn & ", " & fn & i & ") > 1"
+    Next i
+    
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
