@@ -68,9 +68,6 @@ Sub RunSynchronization()
     End If
     
     ' Begin: prep sheets
-    ApplyHeaderRow nationalWorksheet
-    ApplyHeaderRow clubWorksheet
-    
     maxNationalRow = LastRowWithDataInColumn(nationalWorksheet, N_UniqueContactId)
     maxClubRow = LastRowWithDataInColumn(clubWorksheet, C_MemberNumber)
     
@@ -87,6 +84,9 @@ Sub RunSynchronization()
     
     HighlightDuplicateNames nationalWorksheet, maxNationalRow
     HighlightDuplicateNames clubWorksheet, maxClubRow
+    
+    ApplyHeaderRow nationalWorksheet
+    ApplyHeaderRow clubWorksheet
     
     ' End: data cleanup
 End Sub
