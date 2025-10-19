@@ -53,8 +53,6 @@ Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
     Dim maxNationalRow, maxClubRow As Long
-    Dim nationalColumns As Object
-    Dim clubColumns As Object
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -78,8 +76,8 @@ Sub RunSynchronization()
         Exit Sub
     End If
     
-    Set nationalColumns = BuildNationalColumnsDictionary(nationalWorksheet)
-    Set clubColumns = BuildClubColumnsDictionary(clubWorksheet)
+    ' TODO: Verify required columns are present, emit an error sheet if not
+
     ' End: identify data shape
     
     ' Begin: identify duplicates
@@ -95,7 +93,7 @@ Sub RunSynchronization()
     ' End: identify duplicates
     
     ' Begin: discrepancy report
-    BuildDiscrepancyReport nationalWorksheet, nationalColumns, clubWorksheet, clubColumns
+    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
     ' End: discrepancy report
 End Sub
 
@@ -108,8 +106,6 @@ Sub StartDiscrepancyReport()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
     Dim nationalWsName, clubWsName As String
-    Dim nationalColumns As Object
-    Dim clubColumns As Object
 
     Set controlWS = ThisWorkbook.Sheets(1)
     nationalWsName = controlWS.Cells(11, 2).Value
@@ -117,11 +113,8 @@ Sub StartDiscrepancyReport()
     
     Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
     Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
-    
-    Set nationalColumns = BuildNationalColumnsDictionary(nationalWorksheet)
-    Set clubColumns = BuildClubColumnsDictionary(clubWorksheet)
 
-    BuildDiscrepancyReport nationalWorksheet, nationalColumns, clubWorksheet, clubColumns
+    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -161,20 +154,6 @@ Function LoadExcelFileToNewSheet(rosterName As String) As Worksheet
     MsgBox "File imported successfully into sheet: " & targetWS.Name
     
     Set LoadExcelFileToNewSheet = targetWS
-End Function
-
-Function BuildNationalColumnsDictionary(ByRef ws As Worksheet) As Object
-    Dim dict As Object
-    Set dict = CreateObject("Scripting.Dictionary")
-    ' TODO
-    Set BuildNationalColumnsDictionary = dict
-End Function
-
-Function BuildClubColumnsDictionary(ByRef ws As Worksheet) As Object
-    Dim dict As Object
-    Set dict = CreateObject("Scripting.Dictionary")
-    ' TODO
-    Set BuildClubColumnsDictionary = dict
 End Function
 
 Sub ApplyHeaderRow(ByRef ws As Worksheet)
@@ -273,11 +252,8 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     End With
 End Sub
 
-Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByVal nationalColumns As Object, ByRef clubWS As Worksheet, ByVal clubColumns As Object)
+Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
     MsgBox "Found " & nationalWS.Name & " and " & clubWS.Name
-    'Dim testDict As RosterColumn
-    'testDict = nationalColumns(N_FirstName)
-    'MsgBox "Found in dictionary " & testDict.MyColumnName & " " & testDict.ColumnLetter & " " & testDict.ColumnNumber
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
