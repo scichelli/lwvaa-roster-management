@@ -48,6 +48,7 @@ Const I_SortableLastName As String = "Sortable Last Name"
 Const I_CombinedName As String = "Combined Name"
 Const I_DuplicateLastName As String = "Has Duplicate Last Name"
 Const I_DuplicateCombinedName As String = "Has Duplicate Full Name"
+Const I_MissingFromOtherRoster As String = "Missing From Other Roster"
 
 Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
@@ -60,14 +61,14 @@ Sub RunSynchronization()
     
     MsgBox "Next we'll load the Club roster into a worksheet"
     Set clubWorksheet = LoadClubRoster()
-    ' End: load rosters into worksheets
     
     If nationalWorksheet Is Nothing Or clubWorksheet Is Nothing Then
         MsgBox "Did not find two worksheets to compare"
         Exit Sub
     End If
+    ' End: load rosters into worksheets
     
-    ' Begin: prep sheets
+    ' Begin: identify data shape
     maxNationalRow = LastRowWithDataInColumn(nationalWorksheet, N_UniqueContactId)
     maxClubRow = LastRowWithDataInColumn(clubWorksheet, C_MemberNumber)
     
@@ -76,19 +77,49 @@ Sub RunSynchronization()
         Exit Sub
     End If
     
-    ' End: prep sheets
+    ' TODO: Verify required columns are present, emit an error sheet if not
+
+    ' End: identify data shape
     
-    ' Begin: data cleanup
+    ' Begin: identify duplicates
     SortByName nationalWorksheet, maxNationalRow, N_FirstName, N_LastName
     SortByName clubWorksheet, maxClubRow, C_FirstName, C_LastName
     
     HighlightDuplicateNames nationalWorksheet, maxNationalRow
     HighlightDuplicateNames clubWorksheet, maxClubRow
+    ' End: identify duplicates
+    
+    ' Begin: identify missing from other roster
+    HighlightNamesInFirstSheetMissingFromSecondSheet nationalWorksheet, maxNationalRow, clubWorksheet, maxClubRow
+    HighlightNamesInFirstSheetMissingFromSecondSheet clubWorksheet, maxClubRow, nationalWorksheet, maxNationalRow
+    ' End: identify missing from other roster
     
     ApplyHeaderRow nationalWorksheet
     ApplyHeaderRow clubWorksheet
     
-    ' End: data cleanup
+    ' Begin: discrepancy report
+    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    ' End: discrepancy report
+End Sub
+
+Sub StartDiscrepancyReport()
+    ' Useful for testing, and for re-generating the report after modifying the roster worksheets
+    ' If you've already loaded sheets and allowed the macro to prep them, a button connected to this macro can generate the report without repeating the prep.
+    ' Use B11 and B12 for worksheet names
+    
+    Dim controlWS As Worksheet
+    Dim nationalWorksheet As Worksheet
+    Dim clubWorksheet As Worksheet
+    Dim nationalWsName, clubWsName As String
+
+    Set controlWS = ThisWorkbook.Sheets(1)
+    nationalWsName = controlWS.Cells(11, 2).Value
+    clubWsName = controlWS.Cells(12, 2).Value
+    
+    Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
+    Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
+
+    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -205,8 +236,6 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     
     ' add conditional format rules to highlight rows with duplicates
     
-    ' Clear existing conditional format rules
-    ws.Cells.FormatConditions.Delete
     ' Define the range to apply formatting (entire rows from A to max column)
     Dim dataRange As Range
     Set dataRange = ws.Range("A2:" & dupFN & maxRow) ' A2 because headers are in row 1; dupFN because Has Duplicate Full Name is now the right-most column
@@ -214,16 +243,56 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     ' Orange formatting (Column Has Duplicate Full Name = TRUE) -- higher priority
     With dataRange.FormatConditions.Add(Type:=xlExpression, _
         Formula1:="=$" & dupFN & "2=TRUE")
-        .Interior.Color = RGB(255, 192, 0) ' Orange
+        .Interior.Color = RGB(255, 204, 204) ' Orange
         .StopIfTrue = False
     End With
 
     ' Gray formatting (Column Has Duplicate Last Name = TRUE)
     With dataRange.FormatConditions.Add(Type:=xlExpression, _
         Formula1:="=$" & dupLN & "2=TRUE")
-        .Interior.Color = RGB(200, 200, 200) ' Light gray
+        .Interior.Color = RGB(221, 221, 221) ' Light gray
         .StopIfTrue = False
     End With
+End Sub
+
+Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByVal maxRow1 As Long, ByRef ws2 As Worksheet, ByVal maxRow2 As Long)
+    ' add column to ws1 for names missing from ws2
+    ' add conditional formatting, red if missing
+
+    Dim maxColumn, missingNameColumn As Long
+    Dim mn As String ' Missing Name column letter
+    Dim fn1, fn2 As String ' Full Name column letter from sheet 1 and sheet 2
+    maxColumn = LastColumnWithData(ws1)
+    missingNameColumn = maxColumn + 1
+    fn1 = FindColumnLetterByName(ws1, I_CombinedName)
+    fn2 = FindColumnLetterByName(ws2, I_CombinedName)
+    mn = ColumnNumberToLetter(missingNameColumn)
+
+    ws1.Cells(1, missingNameColumn).Value = I_MissingFromOtherRoster
+
+    ' add boolean column for missing names
+    For i = 2 To maxRow1
+        ' Find-missing formula example:
+        ' =ISNA(MATCH($B2, National!$G$2:$G$1000, 0))
+        ws1.Cells(i, missingNameColumn).Formula = "=ISNA(MATCH($" & fn1 & i & ", " & ws2.Name & "!$" & fn2 & "$2:$" & fn2 & "$" & maxRow2 & ", 0))"
+    Next i
+    
+    ' add conditional format rule to highlight rows with missing
+    
+    ' Define the range to apply formatting (entire rows from A to max column)
+    Dim dataRange As Range
+    Set dataRange = ws1.Range("A2:" & mn & maxRow1) ' A2 because headers are in row 1; mn because Missing Name is now the right-most column
+
+    ' Red formatting (Column Missing Name = TRUE)
+    With dataRange.FormatConditions.Add(Type:=xlExpression, _
+        Formula1:="=$" & mn & "2=TRUE")
+        .Interior.Color = RGB(255, 102, 102) ' Red
+        .StopIfTrue = False
+    End With
+End Sub
+
+Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+    ' TODO
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
