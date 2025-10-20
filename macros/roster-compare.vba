@@ -292,7 +292,7 @@ Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByV
 End Sub
 
 Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
-    MsgBox "Found " & nationalWS.Name & " and " & clubWS.Name
+    ' TODO
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
