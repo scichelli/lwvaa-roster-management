@@ -231,8 +231,6 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     
     ' add conditional format rules to highlight rows with duplicates
     
-    ' Clear existing conditional format rules
-    ws.Cells.FormatConditions.Delete
     ' Define the range to apply formatting (entire rows from A to max column)
     Dim dataRange As Range
     Set dataRange = ws.Range("A2:" & dupFN & maxRow) ' A2 because headers are in row 1; dupFN because Has Duplicate Full Name is now the right-most column
@@ -240,14 +238,14 @@ Sub HighlightDuplicateNames(ByRef ws As Worksheet, ByVal maxRow As Long)
     ' Orange formatting (Column Has Duplicate Full Name = TRUE) -- higher priority
     With dataRange.FormatConditions.Add(Type:=xlExpression, _
         Formula1:="=$" & dupFN & "2=TRUE")
-        .Interior.Color = RGB(255, 192, 0) ' Orange
+        .Interior.Color = RGB(255, 204, 204) ' Orange
         .StopIfTrue = False
     End With
 
     ' Gray formatting (Column Has Duplicate Last Name = TRUE)
     With dataRange.FormatConditions.Add(Type:=xlExpression, _
         Formula1:="=$" & dupLN & "2=TRUE")
-        .Interior.Color = RGB(200, 200, 200) ' Light gray
+        .Interior.Color = RGB(221, 221, 221) ' Light gray
         .StopIfTrue = False
     End With
 End Sub
