@@ -292,7 +292,58 @@ Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByV
 End Sub
 
 Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+    Dim discrepancyWS As Worksheet
+    Set discrepancyWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
+    discrepancyWS.Name = "Discrepancies_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
+    
+    ' TODO For rows that are present in both, list discrepancies
+    
+    BuildCoverSheet nationalWS, clubWS, discrepancyWS
+End Sub
+
+Sub BuildCoverSheet(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet, ByRef discrepancyWS As Worksheet)
+    Dim coverWS As Worksheet
+    Dim row As Integer
+    Set coverWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
+    coverWS.Name = "Report_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
+    row = 1
+
+    ' Heading
+    With coverWS.Range(coverWS.Cells(row, 1), coverWS.Cells(row, 3))
+        .Merge
+        .Value = "Member Roster Report " & Format(Now, "yyyymmdd")
+        .Font.Bold = True
+        .Font.Size = 14
+        .Interior.Color = RGB(200, 200, 255)
+        .VerticalAlignment = xlCenter
+    End With
+    row = row + 2
+    
+    ' Specify which worksheets we used
+    With coverWS.Cells(row, 1)
+        .Value = "Source Worksheets:"
+        .Font.Bold = True
+    End With
+    row = row + 1
+    coverWS.Cells(row, 1).Value = "National Roster"
+    coverWS.Cells(row, 2).Value = nationalWS.Name
+    row = row + 1
+    coverWS.Cells(row, 1).Value = "Club Roster"
+    coverWS.Cells(row, 2).Value = clubWS.Name
+    row = row + 1
+    coverWS.Cells(row, 1).Value = "Discrepancy Report"
+    coverWS.Cells(row, 2).Value = discrepancyWS.Name
+    row = row + 1
+
     ' TODO
+    ' Verify all required columns are present
+    ' List count of duplicates from National
+    ' List count of duplicates from Club
+    ' List count of National that are missing from Club
+    ' List count of Club that are missing from National
+    ' List count of discrepancies
+    
+    coverWS.Columns("A").AutoFit
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
@@ -323,7 +374,7 @@ Function LastRowWithDataInColumn(ByRef ws As Worksheet, ByVal columnName As Stri
         Exit Function
     End If
     
-    LastRowWithDataInColumn = ws.Cells(ws.Rows.Count, columnIndex).End(xlUp).Row ' Find last used row in specified column
+    LastRowWithDataInColumn = ws.Cells(ws.Rows.Count, columnIndex).End(xlUp).row ' Find last used row in specified column
 End Function
 
 Function LastColumnWithData(ByRef ws As Worksheet) As Long
