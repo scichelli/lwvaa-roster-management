@@ -76,6 +76,7 @@ Sub RunSynchronization()
     End If
     
     ' TODO: Verify required columns are present, emit an error sheet if not
+    ' create the column dictionaries here, and pass them to other procedures
 
     ' End: identify data shape
     
@@ -399,7 +400,12 @@ Sub BuildCoverSheet(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet, By
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
-    FindColumnLetterByName = ColumnNumberToLetter(FindColumnNumberByName(ws, columnName))
+    Dim columnNumber As Long
+    columnNumber = FindColumnNumberByName(ws, columnName)
+    If columnNumber = 0 Then
+        Exit Function
+    End If
+    FindColumnLetterByName = ColumnNumberToLetter(columnNumber)
 End Function
 
 Function FindColumnNumberByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
