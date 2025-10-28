@@ -11,7 +11,6 @@
 ' National roster column header names
 Const N_FirstName As String = "First Name"
 Const N_PreferredFirstName As String = "Preferred First Name"
-Const N_MiddleName As String = "Middle Name"
 Const N_LastName As String = "Last Name"
 Const N_Phone As String = "Phone"
 Const N_Email As String = "Email"
@@ -22,7 +21,6 @@ Const N_MailingPostalCode As String = "Mailing Postal Code"
 Const N_MailingCountry As String = "Mailing Country"
 Const N_ExpirationDate As String = "Expiration Date"
 Const N_LastLoginDate As String = "Last Login Date"
-Const N_CurrentStatus As String = "Current Status"
 Const N_UniqueContactId As String = "Unique Contact Id"
 Const N_UniqueAccountId As String = "Unique Account Id"
 
@@ -97,9 +95,10 @@ Sub RunSynchronization()
     ApplyHeaderRow nationalWorksheet
     ApplyHeaderRow clubWorksheet
     
-    ' Begin: discrepancy report
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
-    ' End: discrepancy report
+    ' Begin: side-by-side report
+    BuildSideBySideReport nationalWorksheet, clubWorksheet
+    MsgBox "Side-by-side report is ready"
+    ' End: side-by-side report
 End Sub
 
 Sub StartDiscrepancyReport()
@@ -119,7 +118,7 @@ Sub StartDiscrepancyReport()
     Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
     Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
 
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    BuildSideBySideReport nationalWorksheet, clubWorksheet
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -195,7 +194,7 @@ Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal firstNameColum
     ' Sort by the sortable last name column
     With ws.Sort
         .SortFields.Clear
-        .SortFields.Add Key:=ws.Range(ColumnNumberToLetter(sortableLastNameColumn) & 2), _
+        .SortFields.Add key:=ws.Range(ColumnNumberToLetter(sortableLastNameColumn) & 2), _
             SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
             ' ws.Range("M2"), if "M" is the sortable column, and "2" because row 1 is a header
         .SetRange ws.UsedRange
@@ -291,12 +290,117 @@ Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByV
     End With
 End Sub
 
-Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
-    ' TODO
+Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+    ' In a new worksheet, list each club row next to its matching national row if found, then list national rows that have no matching club
+    Dim reportWS As Worksheet
+    Dim lastRowNational As Long, lastRowClub As Long, outputRow As Long
+    Dim lastColumnNational As Long, lastColumnClub As Long, startColumnNational As Long, startColumnClub As Long
+    Dim nationalName As String, clubName As String
+    Dim i As Long, j As Long, k As Long
+    Dim nDict As Object, cDict As Object
+    
+    ' Get column letters
+    Set nDict = CreateObject("Scripting.Dictionary")
+    Set cDict = CreateObject("Scripting.Dictionary")
+    PopulateColumnsDictionaries nDict, nationalWS, cDict, clubWS
+    
+    Set reportWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
+    reportWS.Name = "SideBySide_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
+    
+    ' Get last rows and columns
+    lastRowNational = LastRowWithDataInColumn(nationalWS, I_CombinedName)
+    lastRowClub = LastRowWithDataInColumn(clubWS, I_CombinedName)
+    lastColumnNational = LastColumnWithData(nationalWS)
+    lastColumnClub = LastColumnWithData(clubWS)
+    startColumnClub = 1
+    startColumnNational = lastColumnClub + 1
+    
+    outputRow = 1
+    
+    ' Begin: Add headings
+    With reportWS.Range(reportWS.Cells(outputRow, 1), reportWS.Cells(outputRow, lastColumnClub))
+        .Merge
+        .Value = "Club Roster " & Format(Now, "yyyymmdd")
+        .Font.Bold = True
+        .Font.Size = 14
+    End With
+    
+    With reportWS.Range(reportWS.Cells(outputRow, startColumnNational), reportWS.Cells(outputRow, startColumnNational + lastColumnNational))
+        .Merge
+        .Value = "National Roster " & Format(Now, "yyyymmdd")
+        .Font.Bold = True
+        .Font.Size = 14
+        .Borders(xlEdgeLeft).LineStyle = xlContinuous
+        .Borders(xlEdgeLeft).Weight = xlThick
+        .Borders(xlEdgeLeft).Color = RGB(0, 0, 0)
+    End With
+    outputRow = outputRow + 1
+    
+    ' Although it would be nice to use "For Each key in cDict.Keys", that makes the report brittle to the inclusion of new fields in the export
+    CopySourceRowToReport clubWS, reportWS, 1, outputRow, startColumnClub, lastColumnClub
+    CopySourceRowToReport nationalWS, reportWS, 1, outputRow, startColumnNational, startColumnNational + lastColumnNational
+    outputRow = outputRow + 1
+    
+    With reportWS.Columns(lastColumnClub + 1).Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+        .Color = RGB(0, 0, 0) ' Dark line (black)
+    End With
+    ' End: Add headings
+    
+    ' Loop through club list
+    For i = 2 To lastRowClub ' starting with 2 because row 1 is header
+        CopySourceRowToReport clubWS, reportWS, i, outputRow, startColumnClub, lastColumnClub
+        
+        clubName = clubWS.Cells(i, cDict(I_CombinedName)).Value
+        
+        ' Search for matching name in national list
+        For j = 2 To lastRowNational
+            nationalName = nationalWS.Cells(j, nDict(I_CombinedName)).Value
+            If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
+                CopySourceRowToReport nationalWS, reportWS, j, outputRow, startColumnNational, startColumnNational + lastColumnNational
+                If nationalWS.Cells(j, nDict(I_DuplicateCombinedName)).Value Then
+                    ' Find the remaining matches and add rows for them
+                    For k = j + 1 To lastRowNational
+                        If StrComp(nationalWS.Cells(k, nDict(I_CombinedName)).Value, clubName, vbTextCompare) = 0 Then
+                            outputRow = outputRow + 1
+                            CopySourceRowToReport nationalWS, reportWS, k, outputRow, startColumnNational, startColumnNational + lastColumnNational
+                        End If
+                    Next k
+                End If
+                Exit For
+            End If
+        Next j
+        
+        outputRow = outputRow + 1
+    Next i
+    
+    ' Add rows from national that are not found in club
+    For i = 2 To lastRowNational
+        If nationalWS.Cells(i, nDict(I_MissingFromOtherRoster)).Value Then
+            CopySourceRowToReport nationalWS, reportWS, i, outputRow, startColumnNational, startColumnNational + lastColumnNational
+            outputRow = outputRow + 1
+        End If
+    Next i
+End Sub
+
+Sub CopySourceRowToReport(ByRef sourceWS As Worksheet, ByRef reportWS As Worksheet, ByVal sourceRow As Long, ByVal reportRow As Long, ByVal startColumn As Long, ByVal lastColumn As Long)
+    Dim i As Long, j As Long
+    
+    j = 1
+    For i = startColumn To lastColumn
+        reportWS.Cells(reportRow, i).Value = sourceWS.Cells(sourceRow, j).Value
+        j = j + 1
+    Next i
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
-    FindColumnLetterByName = ColumnNumberToLetter(FindColumnNumberByName(ws, columnName))
+    Dim columnNumber As Long
+    columnNumber = FindColumnNumberByName(ws, columnName)
+    If columnNumber = 0 Then
+        Exit Function
+    End If
+    FindColumnLetterByName = ColumnNumberToLetter(columnNumber)
 End Function
 
 Function FindColumnNumberByName(ByRef ws As Worksheet, ByVal columnName As String) As Long
@@ -323,7 +427,7 @@ Function LastRowWithDataInColumn(ByRef ws As Worksheet, ByVal columnName As Stri
         Exit Function
     End If
     
-    LastRowWithDataInColumn = ws.Cells(ws.Rows.Count, columnIndex).End(xlUp).Row ' Find last used row in specified column
+    LastRowWithDataInColumn = ws.Cells(ws.Rows.Count, columnIndex).End(xlUp).row ' Find last used row in specified column
 End Function
 
 Function LastColumnWithData(ByRef ws As Worksheet) As Long
@@ -345,3 +449,46 @@ Function LowercaseLettersOnly(ByVal txt As String) As String
 
     LowercaseLettersOnly = result
 End Function
+
+Sub PopulateColumnsDictionaries(ByRef nDict As Object, ByRef nationalWS As Worksheet, ByRef cDict As Object, ByRef clubWS As Worksheet)
+    nDict.Add N_FirstName, FindColumnLetterByName(nationalWS, N_FirstName)
+    nDict.Add N_PreferredFirstName, FindColumnLetterByName(nationalWS, N_PreferredFirstName)
+    nDict.Add N_LastName, FindColumnLetterByName(nationalWS, N_LastName)
+    nDict.Add N_Phone, FindColumnLetterByName(nationalWS, N_Phone)
+    nDict.Add N_Email, FindColumnLetterByName(nationalWS, N_Email)
+    nDict.Add N_MailingStreet, FindColumnLetterByName(nationalWS, N_MailingStreet)
+    nDict.Add N_MailingCity, FindColumnLetterByName(nationalWS, N_MailingCity)
+    nDict.Add N_MailingState, FindColumnLetterByName(nationalWS, N_MailingState)
+    nDict.Add N_MailingPostalCode, FindColumnLetterByName(nationalWS, N_MailingPostalCode)
+    nDict.Add N_MailingCountry, FindColumnLetterByName(nationalWS, N_MailingCountry)
+    nDict.Add N_ExpirationDate, FindColumnLetterByName(nationalWS, N_ExpirationDate)
+    nDict.Add N_LastLoginDate, FindColumnLetterByName(nationalWS, N_LastLoginDate)
+    nDict.Add N_UniqueContactId, FindColumnLetterByName(nationalWS, N_UniqueContactId)
+    nDict.Add N_UniqueAccountId, FindColumnLetterByName(nationalWS, N_UniqueAccountId)
+    nDict.Add I_SortableLastName, FindColumnLetterByName(nationalWS, I_SortableLastName)
+    nDict.Add I_CombinedName, FindColumnLetterByName(nationalWS, I_CombinedName)
+    nDict.Add I_DuplicateLastName, FindColumnLetterByName(nationalWS, I_DuplicateLastName)
+    nDict.Add I_DuplicateCombinedName, FindColumnLetterByName(nationalWS, I_DuplicateCombinedName)
+    nDict.Add I_MissingFromOtherRoster, FindColumnLetterByName(nationalWS, I_MissingFromOtherRoster)
+
+    cDict.Add C_MemberNumber, FindColumnLetterByName(clubWS, C_MemberNumber)
+    cDict.Add C_LastName, FindColumnLetterByName(clubWS, C_LastName)
+    cDict.Add C_FirstName, FindColumnLetterByName(clubWS, C_FirstName)
+    cDict.Add C_LoginName, FindColumnLetterByName(clubWS, C_LoginName)
+    cDict.Add C_Address1, FindColumnLetterByName(clubWS, C_Address1)
+    cDict.Add C_Address2, FindColumnLetterByName(clubWS, C_Address2)
+    cDict.Add C_City, FindColumnLetterByName(clubWS, C_City)
+    cDict.Add C_State, FindColumnLetterByName(clubWS, C_State)
+    cDict.Add C_Zip, FindColumnLetterByName(clubWS, C_Zip)
+    cDict.Add C_Phone, FindColumnLetterByName(clubWS, C_Phone)
+    cDict.Add C_CellPhone, FindColumnLetterByName(clubWS, C_CellPhone)
+    cDict.Add C_PrimaryEmail, FindColumnLetterByName(clubWS, C_PrimaryEmail)
+    cDict.Add C_MemberType_name, FindColumnLetterByName(clubWS, C_MemberType_name)
+    cDict.Add C_Level, FindColumnLetterByName(clubWS, C_Level)
+    cDict.Add C_ExpirationDate, FindColumnLetterByName(clubWS, C_ExpirationDate)
+    cDict.Add I_SortableLastName, FindColumnLetterByName(clubWS, I_SortableLastName)
+    cDict.Add I_CombinedName, FindColumnLetterByName(clubWS, I_CombinedName)
+    cDict.Add I_DuplicateLastName, FindColumnLetterByName(clubWS, I_DuplicateLastName)
+    cDict.Add I_DuplicateCombinedName, FindColumnLetterByName(clubWS, I_DuplicateCombinedName)
+    cDict.Add I_MissingFromOtherRoster, FindColumnLetterByName(clubWS, I_MissingFromOtherRoster)
+End Sub
