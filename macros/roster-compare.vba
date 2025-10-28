@@ -95,10 +95,9 @@ Sub RunSynchronization()
     ApplyHeaderRow nationalWorksheet
     ApplyHeaderRow clubWorksheet
     
-    ' Begin: discrepancy report
-    ' BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    ' Begin: side-by-side report
     BuildSideBySideReport nationalWorksheet, clubWorksheet
-    ' End: discrepancy report
+    ' End: side-by-side report
 End Sub
 
 Sub StartDiscrepancyReport()
@@ -118,9 +117,7 @@ Sub StartDiscrepancyReport()
     Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
     Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
 
-    ' BuildDiscrepancyReport nationalWorksheet, clubWorksheet
     BuildSideBySideReport nationalWorksheet, clubWorksheet
-
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -386,115 +383,6 @@ Sub CopySourceRowToReport(ByRef sourceWS As Worksheet, ByRef reportWS As Workshe
         reportWS.Cells(reportRow, i).Value = sourceWS.Cells(sourceRow, j).Value
         j = j + 1
     Next i
-End Sub
-
-Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
-    ' For rows that are present in both rosters, list discrepancies in a new worksheet
-    
-    Dim discrepancyWS As Worksheet
-    Dim lastRowNational As Long, lastRowClub As Long, outputRow As Long
-    Dim nationalName As String, clubName As String
-    Dim nationalExpiration As Variant, clubExpiration As Variant
-    Dim nationalEmail As String, clubEmail As String
-    Dim i As Long, j As Long
-    Dim nDict As Object, cDict As Object
-    
-    ' Get column letters
-    Set nDict = CreateObject("Scripting.Dictionary")
-    Set cDict = CreateObject("Scripting.Dictionary")
-    PopulateColumnsDictionaries nDict, nationalWS, cDict, clubWS
-    
-    Set discrepancyWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
-    discrepancyWS.Name = "Discrepancies_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
-    
-    ' Get last rows
-    lastRowNational = nationalWS.Cells(nationalWS.Rows.Count, nDict(I_CombinedName)).End(xlUp).row
-    lastRowClub = clubWS.Cells(clubWS.Rows.Count, cDict(I_CombinedName)).End(xlUp).row
-
-    outputRow = 1 ' Start writing to row 1
-
-    ' Loop through national list
-    For i = 2 To lastRowNational ' starting with 2 because row 1 is header
-        nationalName = Trim(nationalWS.Cells(i, nDict(I_CombinedName)).Value)
-        nationalExpiration = nationalWS.Cells(i, nDict(N_ExpirationDate)).Value
-        nationalEmail = Trim(nationalWS.Cells(i, nDict(N_Email)).Value)
-
-        ' Search for matching name in club list
-        For j = 2 To lastRowClub
-            clubName = Trim(clubWS.Cells(j, cDict(I_CombinedName)).Value)
-            If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
-                clubExpiration = clubWS.Cells(j, cDict(C_ExpirationDate)).Value
-                clubEmail = Trim(clubWS.Cells(j, cDict(C_PrimaryEmail)).Value)
-
-                ' Compare expiration date and email
-                If nationalExpiration <> clubExpiration Or nationalEmail <> clubEmail Then
-                    ' Add national row to discrepancies sheet
-                    discrepancyWS.Cells(outputRow, 1).Value = "National"
-                    For col = 1 To 50 ' 50 is a placeholder for the max number of columns to copy; the count is exceeded when adding 1 to it
-                        discrepancyWS.Cells(outputRow, col + 1).Value = nationalWS.Cells(i, col).Value
-                    Next col
-                    outputRow = outputRow + 1
-                    
-                    ' Add club row to discrepancies sheet
-                    discrepancyWS.Cells(outputRow, 1).Value = "Club"
-                    For col = 1 To 50 ' 50 is a placeholder, see above
-                        discrepancyWS.Cells(outputRow, col + 1).Value = clubWS.Cells(j, col).Value
-                    Next col
-                    outputRow = outputRow + 1
-                End If
-
-                Exit For
-            End If
-        Next j
-    Next i
-    
-    BuildCoverSheet nationalWS, clubWS, discrepancyWS
-End Sub
-
-Sub BuildCoverSheet(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet, ByRef discrepancyWS As Worksheet)
-    Dim coverWS As Worksheet
-    Dim row As Integer
-    Set coverWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
-    coverWS.Name = "Report_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
-    row = 1
-
-    ' Heading
-    With coverWS.Range(coverWS.Cells(row, 1), coverWS.Cells(row, 3))
-        .Merge
-        .Value = "Member Roster Report " & Format(Now, "yyyymmdd")
-        .Font.Bold = True
-        .Font.Size = 14
-        .Interior.Color = RGB(200, 200, 255)
-        .VerticalAlignment = xlCenter
-    End With
-    row = row + 2
-    
-    ' Specify which worksheets we used
-    With coverWS.Cells(row, 1)
-        .Value = "Source Worksheets:"
-        .Font.Bold = True
-    End With
-    row = row + 1
-    coverWS.Cells(row, 1).Value = "National Roster"
-    coverWS.Cells(row, 2).Value = nationalWS.Name
-    row = row + 1
-    coverWS.Cells(row, 1).Value = "Club Roster"
-    coverWS.Cells(row, 2).Value = clubWS.Name
-    row = row + 1
-    coverWS.Cells(row, 1).Value = "Discrepancy Report"
-    coverWS.Cells(row, 2).Value = discrepancyWS.Name
-    row = row + 1
-    
-    ' TODO
-    
-    ' Verify all required columns are present
-    ' List count of duplicates from National
-    ' List count of duplicates from Club
-    ' List count of National that are missing from Club
-    ' List count of Club that are missing from National
-    ' List count of discrepancies
-    
-    coverWS.Columns("A").AutoFit
 End Sub
 
 Function FindColumnLetterByName(ByRef ws As Worksheet, ByVal columnName As String) As String
