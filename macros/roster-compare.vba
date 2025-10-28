@@ -295,7 +295,7 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     Dim lastRowNational As Long, lastRowClub As Long, outputRow As Long
     Dim lastColumnNational As Long, lastColumnClub As Long, startColumnNational As Long, startColumnClub As Long
     Dim nationalName As String, clubName As String
-    Dim i As Long, j As Long
+    Dim i As Long, j As Long, k As Long
     Dim nDict As Object, cDict As Object
     
     ' Get column letters
@@ -358,7 +358,15 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
             nationalName = nationalWS.Cells(j, nDict(I_CombinedName)).Value
             If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
                 CopySourceRowToReport nationalWS, reportWS, j, outputRow, startColumnNational, startColumnNational + lastColumnNational
-                ' TODO When national has duplicates, there will be multiple matches; be careful about when to increment outputRow
+                If nationalWS.Cells(j, nDict(I_DuplicateCombinedName)).Value Then
+                    ' Find the remaining matches and add rows for them
+                    For k = j + 1 To lastRowNational
+                        If StrComp(nationalWS.Cells(k, nDict(I_CombinedName)).Value, clubName, vbTextCompare) = 0 Then
+                            outputRow = outputRow + 1
+                            CopySourceRowToReport nationalWS, reportWS, k, outputRow, startColumnNational, startColumnNational + lastColumnNational
+                        End If
+                    Next k
+                End If
                 Exit For
             End If
         Next j
