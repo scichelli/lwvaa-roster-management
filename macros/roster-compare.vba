@@ -51,7 +51,8 @@ Const I_MissingFromOtherRoster As String = "Missing From Other Roster"
 Sub RunSynchronization()
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
-    Dim maxNationalRow, maxClubRow As Long
+    Dim nDict As Object, cDict As Object
+    Dim maxNationalRow As Long, maxClubRow As Long
     
     ' Begin: load rosters into worksheets
     MsgBox "First we'll load the National roster into a worksheet"
@@ -74,9 +75,13 @@ Sub RunSynchronization()
         MsgBox "Did not find data to compare"
         Exit Sub
     End If
+        
+    ' Get column letters
+    Set nDict = CreateObject("Scripting.Dictionary")
+    Set cDict = CreateObject("Scripting.Dictionary")
+    PopulateColumnsDictionaries nDict, nationalWorksheet, cDict, clubWorksheet
     
     ' TODO: Verify required columns are present, emit an error sheet if not
-    ' create the column dictionaries here, and pass them to other procedures
 
     ' End: identify data shape
     
@@ -97,7 +102,7 @@ Sub RunSynchronization()
     ApplyHeaderRow clubWorksheet
     
     ' Begin: discrepancy report
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    BuildDiscrepancyReport nationalWorksheet, nDict, clubWorksheet, cDict
     ' End: discrepancy report
 End Sub
 
@@ -109,6 +114,7 @@ Sub StartDiscrepancyReport()
     Dim controlWS As Worksheet
     Dim nationalWorksheet As Worksheet
     Dim clubWorksheet As Worksheet
+    Dim nDict As Object, cDict As Object
     Dim nationalWsName, clubWsName As String
 
     Set controlWS = ThisWorkbook.Sheets(1)
@@ -118,7 +124,12 @@ Sub StartDiscrepancyReport()
     Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
     Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
 
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    ' Get column letters
+    Set nDict = CreateObject("Scripting.Dictionary")
+    Set cDict = CreateObject("Scripting.Dictionary")
+    PopulateColumnsDictionaries nDict, nationalWorksheet, cDict, clubWorksheet
+
+    BuildDiscrepancyReport nationalWorksheet, nDict, clubWorksheet, cDict
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -290,7 +301,7 @@ Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByV
     End With
 End Sub
 
-Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef nDict As Object, ByRef clubWS As Worksheet, ByRef cDict As Object)
     ' For rows that are present in both rosters, list discrepancies in a new worksheet
     
     Dim discrepancyWS As Worksheet
@@ -299,13 +310,7 @@ Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksh
     Dim nationalExpiration As Variant, clubExpiration As Variant
     Dim nationalEmail As String, clubEmail As String
     Dim i As Long, j As Long
-    Dim nDict As Object, cDict As Object
-    
-    ' Get column letters
-    Set nDict = CreateObject("Scripting.Dictionary")
-    Set cDict = CreateObject("Scripting.Dictionary")
-    PopulateColumnsDictionaries nDict, nationalWS, cDict, clubWS
-    
+        
     Set discrepancyWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
     discrepancyWS.Name = "Discrepancies_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
     
