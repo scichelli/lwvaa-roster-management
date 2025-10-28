@@ -11,7 +11,6 @@
 ' National roster column header names
 Const N_FirstName As String = "First Name"
 Const N_PreferredFirstName As String = "Preferred First Name"
-Const N_MiddleName As String = "Middle Name"
 Const N_LastName As String = "Last Name"
 Const N_Phone As String = "Phone"
 Const N_Email As String = "Email"
@@ -22,7 +21,6 @@ Const N_MailingPostalCode As String = "Mailing Postal Code"
 Const N_MailingCountry As String = "Mailing Country"
 Const N_ExpirationDate As String = "Expiration Date"
 Const N_LastLoginDate As String = "Last Login Date"
-Const N_CurrentStatus As String = "Current Status"
 Const N_UniqueContactId As String = "Unique Contact Id"
 Const N_UniqueAccountId As String = "Unique Account Id"
 
@@ -327,7 +325,7 @@ Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksh
             clubName = Trim(clubWS.Cells(j, cDict(I_CombinedName)).Value)
             If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
                 clubExpiration = clubWS.Cells(j, cDict(C_ExpirationDate)).Value
-                clubEmail = Trim(clubWS.Cells(j, cDict(C_Email)).Value)
+                clubEmail = Trim(clubWS.Cells(j, cDict(C_PrimaryEmail)).Value)
 
                 ' Compare expiration date and email
                 If nationalExpiration <> clubExpiration Or nationalEmail <> clubEmail Then
@@ -452,11 +450,44 @@ Function LowercaseLettersOnly(ByVal txt As String) As String
 End Function
 
 Sub PopulateColumnsDictionaries(ByRef nDict As Object, ByRef nationalWS As Worksheet, ByRef cDict As Object, ByRef clubWS As Worksheet)
-    nDict.Add I_CombinedName, FindColumnLetterByName(nationalWS, I_CombinedName)
-    cDict.Add I_CombinedName, FindColumnLetterByName(clubWS, I_CombinedName)
-    nDict.Add N_ExpirationDate, FindColumnLetterByName(nationalWS, N_ExpirationDate)
-    cDict.Add C_ExpirationDate, FindColumnLetterByName(clubWS, C_ExpirationDate)
+    nDict.Add N_FirstName, FindColumnLetterByName(nationalWS, N_FirstName)
+    nDict.Add N_PreferredFirstName, FindColumnLetterByName(nationalWS, N_PreferredFirstName)
+    nDict.Add N_LastName, FindColumnLetterByName(nationalWS, N_LastName)
+    nDict.Add N_Phone, FindColumnLetterByName(nationalWS, N_Phone)
     nDict.Add N_Email, FindColumnLetterByName(nationalWS, N_Email)
-    cDict.Add C_Email, FindColumnLetterByName(clubWS, C_Email)
-    ' TODO populate with all columns
+    nDict.Add N_MailingStreet, FindColumnLetterByName(nationalWS, N_MailingStreet)
+    nDict.Add N_MailingCity, FindColumnLetterByName(nationalWS, N_MailingCity)
+    nDict.Add N_MailingState, FindColumnLetterByName(nationalWS, N_MailingState)
+    nDict.Add N_MailingPostalCode, FindColumnLetterByName(nationalWS, N_MailingPostalCode)
+    nDict.Add N_MailingCountry, FindColumnLetterByName(nationalWS, N_MailingCountry)
+    nDict.Add N_ExpirationDate, FindColumnLetterByName(nationalWS, N_ExpirationDate)
+    nDict.Add N_LastLoginDate, FindColumnLetterByName(nationalWS, N_LastLoginDate)
+    nDict.Add N_UniqueContactId, FindColumnLetterByName(nationalWS, N_UniqueContactId)
+    nDict.Add N_UniqueAccountId, FindColumnLetterByName(nationalWS, N_UniqueAccountId)
+    nDict.Add I_SortableLastName, FindColumnLetterByName(nationalWS, I_SortableLastName)
+    nDict.Add I_CombinedName, FindColumnLetterByName(nationalWS, I_CombinedName)
+    nDict.Add I_DuplicateLastName, FindColumnLetterByName(nationalWS, I_DuplicateLastName)
+    nDict.Add I_DuplicateCombinedName, FindColumnLetterByName(nationalWS, I_DuplicateCombinedName)
+    nDict.Add I_MissingFromOtherRoster, FindColumnLetterByName(nationalWS, I_MissingFromOtherRoster)
+
+    cDict.Add C_MemberNumber, FindColumnLetterByName(clubWS, C_MemberNumber)
+    cDict.Add C_LastName, FindColumnLetterByName(clubWS, C_LastName)
+    cDict.Add C_FirstName, FindColumnLetterByName(clubWS, C_FirstName)
+    cDict.Add C_LoginName, FindColumnLetterByName(clubWS, C_LoginName)
+    cDict.Add C_Address1, FindColumnLetterByName(clubWS, C_Address1)
+    cDict.Add C_Address2, FindColumnLetterByName(clubWS, C_Address2)
+    cDict.Add C_City, FindColumnLetterByName(clubWS, C_City)
+    cDict.Add C_State, FindColumnLetterByName(clubWS, C_State)
+    cDict.Add C_Zip, FindColumnLetterByName(clubWS, C_Zip)
+    cDict.Add C_Phone, FindColumnLetterByName(clubWS, C_Phone)
+    cDict.Add C_CellPhone, FindColumnLetterByName(clubWS, C_CellPhone)
+    cDict.Add C_PrimaryEmail, FindColumnLetterByName(clubWS, C_PrimaryEmail)
+    cDict.Add C_MemberType_name, FindColumnLetterByName(clubWS, C_MemberType_name)
+    cDict.Add C_Level, FindColumnLetterByName(clubWS, C_Level)
+    cDict.Add C_ExpirationDate, FindColumnLetterByName(clubWS, C_ExpirationDate)
+    cDict.Add I_SortableLastName, FindColumnLetterByName(clubWS, I_SortableLastName)
+    cDict.Add I_CombinedName, FindColumnLetterByName(clubWS, I_CombinedName)
+    cDict.Add I_DuplicateLastName, FindColumnLetterByName(clubWS, I_DuplicateLastName)
+    cDict.Add I_DuplicateCombinedName, FindColumnLetterByName(clubWS, I_DuplicateCombinedName)
+    cDict.Add I_MissingFromOtherRoster, FindColumnLetterByName(clubWS, I_MissingFromOtherRoster)
 End Sub
