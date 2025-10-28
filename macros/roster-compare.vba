@@ -76,7 +76,6 @@ Sub RunSynchronization()
     End If
     
     ' TODO: Verify required columns are present, emit an error sheet if not
-    ' create the column dictionaries here, and pass them to other procedures
 
     ' End: identify data shape
     
@@ -97,7 +96,8 @@ Sub RunSynchronization()
     ApplyHeaderRow clubWorksheet
     
     ' Begin: discrepancy report
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    ' BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    BuildSideBySideReport nationalWorksheet, clubWorksheet
     ' End: discrepancy report
 End Sub
 
@@ -118,7 +118,9 @@ Sub StartDiscrepancyReport()
     Set nationalWorksheet = ThisWorkbook.Sheets(nationalWsName)
     Set clubWorksheet = ThisWorkbook.Sheets(clubWsName)
 
-    BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    ' BuildDiscrepancyReport nationalWorksheet, clubWorksheet
+    BuildSideBySideReport nationalWorksheet, clubWorksheet
+
 End Sub
 
 Function LoadNationalRoster() As Worksheet
@@ -288,6 +290,64 @@ Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByV
         .Interior.Color = RGB(255, 102, 102) ' Red
         .StopIfTrue = False
     End With
+End Sub
+
+Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+    ' In a new worksheet, list each club row next to its matching national row if found, then list national rows that have no matching club
+    Dim reportWS As Worksheet
+    Dim lastRowNational As Long, lastRowClub As Long, outputRow As Long
+    Dim lastColumnNational As Long, lastColumnClub As Long
+    Dim nationalName As String, clubName As String
+    Dim i As Long, j As Long
+    Dim nDict As Object, cDict As Object
+    Dim key As Variant
+    
+    ' Get column letters
+    Set nDict = CreateObject("Scripting.Dictionary")
+    Set cDict = CreateObject("Scripting.Dictionary")
+    PopulateColumnsDictionaries nDict, nationalWS, cDict, clubWS
+    
+    Set reportWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
+    reportWS.Name = "SideBySide_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
+    
+    ' Get last rows and columns
+    lastRowNational = LastRowWithDataInColumn(nationalWS, I_CombinedName)
+    lastRowClub = LastRowWithDataInColumn(clubWS, I_CombinedName)
+    lastColumnNational = LastColumnWithData(nationalWS)
+    lastColumnClub = LastColumnWithData(clubWS)
+    
+    outputRow = 1
+    
+    ' Add headings
+    With reportWS.Range(reportWS.Cells(outputRow, 1), reportWS.Cells(outputRow, lastColumnClub))
+        .Merge
+        .Value = "Club Roster " & Format(Now, "yyyymmdd")
+        .Font.Bold = True
+        .Font.Size = 14
+    End With
+    
+    With reportWS.Range(reportWS.Cells(outputRow, lastColumnClub + 1), reportWS.Cells(outputRow, (lastColumnClub + 1) + lastColumnNational))
+        .Merge
+        .Value = "National Roster " & Format(Now, "yyyymmdd")
+        .Font.Bold = True
+        .Font.Size = 14
+    End With
+    outputRow = outputRow + 1
+    
+    ' Althought it would be nice to use "For Each key in cDict.Keys", that makes the report brittle to the inclusion of new fields in the export
+    i = 1
+    For Each key In cDict.Keys
+        reportWS.Cells(outputRow, i).Value = key
+        i = i + 1
+    Next key
+    For Each key In nDict.Keys
+        reportWS.Cells(outputRow, i).Value = key
+        i = i + 1
+    Next key
+    outputRow = outputRow + 1
+    
+    reportWS.Cells(outputRow, 1).Value = "ready for rows"
+
 End Sub
 
 Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
