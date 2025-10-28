@@ -300,39 +300,34 @@ Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksh
     Dim nationalExpiration As Variant, clubExpiration As Variant
     Dim nationalEmail As String, clubEmail As String
     Dim i As Long, j As Long
-    Dim NDict As Object, CDict As Object
+    Dim nDict As Object, cDict As Object
     
     ' Get column letters
-    Set NDict = CreateObject("Scripting.Dictionary")
-    Set CDict = CreateObject("Scripting.Dictionary")
-    NDict.Add I_CombinedName, FindColumnLetterByName(nationalWS, I_CombinedName)
-    CDict.Add I_CombinedName, FindColumnLetterByName(clubWS, I_CombinedName)
-    NDict.Add N_ExpirationDate, FindColumnLetterByName(nationalWS, N_ExpirationDate)
-    CDict.Add C_ExpirationDate, FindColumnLetterByName(clubWS, C_ExpirationDate)
-    NDict.Add N_Email, FindColumnLetterByName(nationalWS, N_Email)
-    CDict.Add C_Email, FindColumnLetterByName(clubWS, C_Email)
+    Set nDict = CreateObject("Scripting.Dictionary")
+    Set cDict = CreateObject("Scripting.Dictionary")
+    PopulateColumnsDictionaries nDict, nationalWS, cDict, clubWS
     
     Set discrepancyWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
     discrepancyWS.Name = "Discrepancies_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
     
     ' Get last rows
-    lastRowNational = nationalWS.Cells(nationalWS.Rows.Count, NDict(I_CombinedName)).End(xlUp).row
-    lastRowClub = clubWS.Cells(clubWS.Rows.Count, CDict(I_CombinedName)).End(xlUp).row
+    lastRowNational = nationalWS.Cells(nationalWS.Rows.Count, nDict(I_CombinedName)).End(xlUp).row
+    lastRowClub = clubWS.Cells(clubWS.Rows.Count, cDict(I_CombinedName)).End(xlUp).row
 
     outputRow = 1 ' Start writing to row 1
 
     ' Loop through national list
     For i = 2 To lastRowNational ' starting with 2 because row 1 is header
-        nationalName = Trim(nationalWS.Cells(i, NDict(I_CombinedName)).Value)
-        nationalExpiration = nationalWS.Cells(i, NDict(N_ExpirationDate)).Value
-        nationalEmail = Trim(nationalWS.Cells(i, NDict(N_Email)).Value)
+        nationalName = Trim(nationalWS.Cells(i, nDict(I_CombinedName)).Value)
+        nationalExpiration = nationalWS.Cells(i, nDict(N_ExpirationDate)).Value
+        nationalEmail = Trim(nationalWS.Cells(i, nDict(N_Email)).Value)
 
         ' Search for matching name in club list
         For j = 2 To lastRowClub
-            clubName = Trim(clubWS.Cells(j, CDict(I_CombinedName)).Value)
+            clubName = Trim(clubWS.Cells(j, cDict(I_CombinedName)).Value)
             If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
-                clubExpiration = clubWS.Cells(j, CDict(C_ExpirationDate)).Value
-                clubEmail = Trim(clubWS.Cells(j, CDict(C_Email)).Value)
+                clubExpiration = clubWS.Cells(j, cDict(C_ExpirationDate)).Value
+                clubEmail = Trim(clubWS.Cells(j, cDict(C_Email)).Value)
 
                 ' Compare expiration date and email
                 If nationalExpiration <> clubExpiration Or nationalEmail <> clubEmail Then
@@ -455,3 +450,13 @@ Function LowercaseLettersOnly(ByVal txt As String) As String
 
     LowercaseLettersOnly = result
 End Function
+
+Sub PopulateColumnsDictionaries(ByRef nDict As Object, ByRef nationalWS As Worksheet, ByRef cDict As Object, ByRef clubWS As Worksheet)
+    nDict.Add I_CombinedName, FindColumnLetterByName(nationalWS, I_CombinedName)
+    cDict.Add I_CombinedName, FindColumnLetterByName(clubWS, I_CombinedName)
+    nDict.Add N_ExpirationDate, FindColumnLetterByName(nationalWS, N_ExpirationDate)
+    cDict.Add C_ExpirationDate, FindColumnLetterByName(clubWS, C_ExpirationDate)
+    nDict.Add N_Email, FindColumnLetterByName(nationalWS, N_Email)
+    cDict.Add C_Email, FindColumnLetterByName(clubWS, C_Email)
+    ' TODO populate with all columns
+End Sub
