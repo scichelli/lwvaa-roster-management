@@ -196,7 +196,7 @@ Sub SortByName(ByRef ws As Worksheet, ByVal maxRow As Long, ByVal firstNameColum
     ' Sort by the sortable last name column
     With ws.Sort
         .SortFields.Clear
-        .SortFields.Add Key:=ws.Range(ColumnNumberToLetter(sortableLastNameColumn) & 2), _
+        .SortFields.Add key:=ws.Range(ColumnNumberToLetter(sortableLastNameColumn) & 2), _
             SortOn:=xlSortOnValues, Order:=xlAscending, DataOption:=xlSortNormal
             ' ws.Range("M2"), if "M" is the sortable column, and "2" because row 1 is a header
         .SetRange ws.UsedRange
@@ -339,17 +339,8 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     outputRow = outputRow + 1
     
     ' Althought it would be nice to use "For Each key in cDict.Keys", that makes the report brittle to the inclusion of new fields in the export
-    j = 1 ' Using a separate iterator so that we can switch whether club or national is on the left of the report
-    For i = startColumnClub To lastColumnClub
-        reportWS.Cells(outputRow, i).Value = clubWS.Cells(1, j).Value
-        j = j + 1
-    Next i
-    
-    j = 1
-    For i = startColumnNational To startColumnNational + lastColumnNational
-        reportWS.Cells(outputRow, i).Value = nationalWS.Cells(1, j).Value
-        j = j + 1
-    Next i
+    CopySourceRowToReport clubWS, reportWS, 1, outputRow, startColumnClub, lastColumnClub
+    CopySourceRowToReport nationalWS, reportWS, 1, outputRow, startColumnNational, startColumnNational + lastColumnNational
     outputRow = outputRow + 1
     
     With reportWS.Columns(lastColumnClub + 1).Borders(xlEdgeLeft)
@@ -361,6 +352,16 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     
     reportWS.Cells(outputRow, 1).Value = "ready for rows"
 
+End Sub
+
+Sub CopySourceRowToReport(ByRef sourceWS As Worksheet, ByRef reportWS As Worksheet, ByVal sourceRow As Long, ByVal reportRow As Long, ByVal startColumn As Long, ByVal lastColumn As Long)
+    Dim i As Long, j As Long
+    
+    j = 1
+    For i = startColumn To lastColumn
+        reportWS.Cells(reportRow, i).Value = sourceWS.Cells(sourceRow, j).Value
+        j = j + 1
+    Next i
 End Sub
 
 Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
