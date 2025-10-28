@@ -369,8 +369,13 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
         outputRow = outputRow + 1
     Next i
     
-    ' TODO Get rows from national that are not found in club
-
+    ' Add rows from national that are not found in club
+    For i = 2 To lastRowNational
+        If nationalWS.Cells(i, nDict(I_MissingFromOtherRoster)).Value Then
+            CopySourceRowToReport nationalWS, reportWS, i, outputRow, startColumnNational, startColumnNational + lastColumnNational
+            outputRow = outputRow + 1
+        End If
+    Next i
 End Sub
 
 Sub CopySourceRowToReport(ByRef sourceWS As Worksheet, ByRef reportWS As Worksheet, ByVal sourceRow As Long, ByVal reportRow As Long, ByVal startColumn As Long, ByVal lastColumn As Long)
