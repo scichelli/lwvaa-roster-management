@@ -338,7 +338,7 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     End With
     outputRow = outputRow + 1
     
-    ' Althought it would be nice to use "For Each key in cDict.Keys", that makes the report brittle to the inclusion of new fields in the export
+    ' Although it would be nice to use "For Each key in cDict.Keys", that makes the report brittle to the inclusion of new fields in the export
     CopySourceRowToReport clubWS, reportWS, 1, outputRow, startColumnClub, lastColumnClub
     CopySourceRowToReport nationalWS, reportWS, 1, outputRow, startColumnNational, startColumnNational + lastColumnNational
     outputRow = outputRow + 1
@@ -350,7 +350,26 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     End With
     ' End: Add headings
     
-    reportWS.Cells(outputRow, 1).Value = "ready for rows"
+    ' Loop through club list
+    For i = 2 To lastRowClub ' starting with 2 because row 1 is header
+        CopySourceRowToReport clubWS, reportWS, i, outputRow, startColumnClub, lastColumnClub
+        
+        clubName = clubWS.Cells(i, cDict(I_CombinedName)).Value
+        
+        ' Search for matching name in national list
+        For j = 2 To lastRowNational
+            nationalName = nationalWS.Cells(j, nDict(I_CombinedName)).Value
+            If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
+                CopySourceRowToReport nationalWS, reportWS, j, outputRow, startColumnNational, startColumnNational + lastColumnNational
+                ' TODO When national has duplicates, there will be multiple matches; be careful about when to increment outputRow
+                Exit For
+            End If
+        Next j
+        
+        outputRow = outputRow + 1
+    Next i
+    
+    ' TODO Get rows from national that are not found in club
 
 End Sub
 
