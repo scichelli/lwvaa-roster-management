@@ -296,11 +296,10 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     ' In a new worksheet, list each club row next to its matching national row if found, then list national rows that have no matching club
     Dim reportWS As Worksheet
     Dim lastRowNational As Long, lastRowClub As Long, outputRow As Long
-    Dim lastColumnNational As Long, lastColumnClub As Long
+    Dim lastColumnNational As Long, lastColumnClub As Long, startColumnNational As Long, startColumnClub As Long
     Dim nationalName As String, clubName As String
     Dim i As Long, j As Long
     Dim nDict As Object, cDict As Object
-    Dim key As Variant
     
     ' Get column letters
     Set nDict = CreateObject("Scripting.Dictionary")
@@ -315,10 +314,12 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
     lastRowClub = LastRowWithDataInColumn(clubWS, I_CombinedName)
     lastColumnNational = LastColumnWithData(nationalWS)
     lastColumnClub = LastColumnWithData(clubWS)
+    startColumnClub = 1
+    startColumnNational = lastColumnClub + 1
     
     outputRow = 1
     
-    ' Add headings
+    ' Begin: Add headings
     With reportWS.Range(reportWS.Cells(outputRow, 1), reportWS.Cells(outputRow, lastColumnClub))
         .Merge
         .Value = "Club Roster " & Format(Now, "yyyymmdd")
@@ -326,25 +327,37 @@ Sub BuildSideBySideReport(ByRef nationalWS As Worksheet, ByRef clubWS As Workshe
         .Font.Size = 14
     End With
     
-    With reportWS.Range(reportWS.Cells(outputRow, lastColumnClub + 1), reportWS.Cells(outputRow, (lastColumnClub + 1) + lastColumnNational))
+    With reportWS.Range(reportWS.Cells(outputRow, startColumnNational), reportWS.Cells(outputRow, startColumnNational + lastColumnNational))
         .Merge
         .Value = "National Roster " & Format(Now, "yyyymmdd")
         .Font.Bold = True
         .Font.Size = 14
+        .Borders(xlEdgeLeft).LineStyle = xlContinuous
+        .Borders(xlEdgeLeft).Weight = xlThick
+        .Borders(xlEdgeLeft).Color = RGB(0, 0, 0)
     End With
     outputRow = outputRow + 1
     
     ' Althought it would be nice to use "For Each key in cDict.Keys", that makes the report brittle to the inclusion of new fields in the export
-    i = 1
-    For Each key In cDict.Keys
-        reportWS.Cells(outputRow, i).Value = key
-        i = i + 1
-    Next key
-    For Each key In nDict.Keys
-        reportWS.Cells(outputRow, i).Value = key
-        i = i + 1
-    Next key
+    j = 1 ' Using a separate iterator so that we can switch whether club or national is on the left of the report
+    For i = startColumnClub To lastColumnClub
+        reportWS.Cells(outputRow, i).Value = clubWS.Cells(1, j).Value
+        j = j + 1
+    Next i
+    
+    j = 1
+    For i = startColumnNational To startColumnNational + lastColumnNational
+        reportWS.Cells(outputRow, i).Value = nationalWS.Cells(1, j).Value
+        j = j + 1
+    Next i
     outputRow = outputRow + 1
+    
+    With reportWS.Columns(lastColumnClub + 1).Borders(xlEdgeLeft)
+        .LineStyle = xlContinuous
+        .Weight = xlThick
+        .Color = RGB(0, 0, 0) ' Dark line (black)
+    End With
+    ' End: Add headings
     
     reportWS.Cells(outputRow, 1).Value = "ready for rows"
 
