@@ -292,11 +292,67 @@ Sub HighlightNamesInFirstSheetMissingFromSecondSheet(ByRef ws1 As Worksheet, ByV
 End Sub
 
 Sub BuildDiscrepancyReport(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet)
+    ' For rows that are present in both rosters, list discrepancies in a new worksheet
+    
     Dim discrepancyWS As Worksheet
+    Dim lastRowNational As Long, lastRowClub As Long, outputRow As Long
+    Dim nationalName As String, natNameCol As String, clubName As String, clubNameCol As String
+    Dim nationalExpiration As Variant, clubExpiration As Variant
+    Dim natExpCol As String, clubExpCol As String
+    Dim nationalEmail As String, natEmailCol As String, clubEmail As String, clubEmailCol As String
+    Dim i As Long, j As Long
+    
     Set discrepancyWS = ThisWorkbook.Sheets.Add(After:=ThisWorkbook.Sheets(1))
     discrepancyWS.Name = "Discrepancies_" & Format(Now, "yyyymmdd") & "_" & Format(Now, "hhmmss")
     
-    ' TODO For rows that are present in both, list discrepancies
+    ' Get column letters
+    natNameCol = FindColumnLetterByName(nationalWS, I_CombinedName)
+    clubNameCol = FindColumnLetterByName(clubWS, I_CombinedName)
+    natExpCol = FindColumnLetterByName(nationalWS, N_ExpirationDate)
+    clubExpCol = FindColumnLetterByName(clubWS, C_ExpirationDate)
+    natEmailCol = FindColumnLetterByName(nationalWS, N_Email)
+    clubEmailCol = FindColumnLetterByName(clubWS, C_Email)
+
+    ' Get last rows
+    lastRowNational = nationalWS.Cells(nationalWS.Rows.Count, natNameCol).End(xlUp).row
+    lastRowClub = clubWS.Cells(clubWS.Rows.Count, clubNameCol).End(xlUp).row
+
+    outputRow = 1 ' Start writing to row 1
+
+    ' Loop through national list
+    For i = 2 To lastRowNational ' starting with 2 because row 1 is header
+        nationalName = Trim(nationalWS.Cells(i, natNameCol).Value)
+        nationalExpiration = nationalWS.Cells(i, natExpCol).Value
+        nationalEmail = Trim(nationalWS.Cells(i, natEmailCol).Value)
+
+        ' Search for matching name in club list
+        For j = 2 To lastRowClub
+            clubName = Trim(clubWS.Cells(j, clubNameCol).Value)
+            If StrComp(nationalName, clubName, vbTextCompare) = 0 Then
+                clubExpiration = clubWS.Cells(j, clubExpCol).Value
+                clubEmail = Trim(clubWS.Cells(j, clubEmailCol).Value)
+
+                ' Compare expiration date and email
+                If nationalExpiration <> clubExpiration Or nationalEmail <> clubEmail Then
+                    ' Add national row to discrepancies sheet
+                    discrepancyWS.Cells(outputRow, 1).Value = "National"
+                    For col = 1 To 50 ' 50 is a placeholder for the max number of columns to copy; the count is exceeded when adding 1 to it
+                        discrepancyWS.Cells(outputRow, col + 1).Value = nationalWS.Cells(i, col).Value
+                    Next col
+                    outputRow = outputRow + 1
+                    
+                    ' Add club row to discrepancies sheet
+                    discrepancyWS.Cells(outputRow, 1).Value = "Club"
+                    For col = 1 To 50 ' 50 is a placeholder, see above
+                        discrepancyWS.Cells(outputRow, col + 1).Value = clubWS.Cells(j, col).Value
+                    Next col
+                    outputRow = outputRow + 1
+                End If
+
+                Exit For
+            End If
+        Next j
+    Next i
     
     BuildCoverSheet nationalWS, clubWS, discrepancyWS
 End Sub
@@ -334,8 +390,9 @@ Sub BuildCoverSheet(ByRef nationalWS As Worksheet, ByRef clubWS As Worksheet, By
     coverWS.Cells(row, 1).Value = "Discrepancy Report"
     coverWS.Cells(row, 2).Value = discrepancyWS.Name
     row = row + 1
-
+    
     ' TODO
+    
     ' Verify all required columns are present
     ' List count of duplicates from National
     ' List count of duplicates from Club
