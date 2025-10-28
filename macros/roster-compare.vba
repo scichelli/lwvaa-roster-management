@@ -97,6 +97,7 @@ Sub RunSynchronization()
     
     ' Begin: side-by-side report
     BuildSideBySideReport nationalWorksheet, clubWorksheet
+    MsgBox "Side-by-side report is ready"
     ' End: side-by-side report
 End Sub
 
